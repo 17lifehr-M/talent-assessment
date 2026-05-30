@@ -161,7 +161,7 @@ button{font-family:'Noto Sans TC',sans-serif;cursor:pointer;border:none;border-r
       </div>
       <div class="intro-card-body">
         <div class="info-grid">
-          <div class="info-item"><span class="ii-icon">📝</span><div><p>題目數量</p><strong>88 道題目</strong></div></div>
+          <div class="info-item"><span class="ii-icon">📝</span><div><p>題目數量</p><strong>95 道題目</strong></div></div>
           <div class="info-item"><span class="ii-icon">⏱</span><div><p>每題限時</p><strong>15 秒</strong></div></div>
           <div class="info-item"><span class="ii-icon">⏳</span><div><p>總時限</p><strong>25 分鐘</strong></div></div>
           <div class="info-item"><span class="ii-icon">🔍</span><div><p>構面分析</p><strong>14 個維度</strong></div></div>
@@ -251,14 +251,12 @@ button{font-family:'Noto Sans TC',sans-serif;cursor:pointer;border:none;border-r
 function loadData(k,def){try{const v=localStorage.getItem(k);return v?JSON.parse(v):def}catch{return def}}
 function saveData(k,v){localStorage.setItem(k,JSON.stringify(v))}
 
-let admins = loadData('admins',[{name:'系統管理員',acc:'admin',pw:'admin123',email:'admin@company.com',role:'super'}]);
 let records = loadData('records',[]);
-let emailCfg = loadData('emailCfg',{service:'',template:'',pubkey:'',notifyEmail:''});
 let gsheetCfg = loadData('gsheetCfg',{url:''});
 let currentAdmin = null;
 let currentReportIdx = -1;
 
-function persist(){saveData('admins',admins);saveData('records',records);saveData('emailCfg',emailCfg);saveData('gsheetCfg',gsheetCfg)}
+function persist(){saveData('records',records);saveData('gsheetCfg',gsheetCfg)}
 
 // ══════════════════════════════════
 // PAGE NAVIGATION
@@ -510,34 +508,18 @@ function showDone(r){
 }
 
 // ══════════════════════════════════
-// NOTIFICATIONS
+// PUSH TO GOOGLE SHEET (triggers email notification in Apps Script)
 // ══════════════════════════════════
 function sendNotification(r){
-  // 使用超級管理員 email 作為通知對象
-  const admins=loadData('admins',[]);
-  const superAdmin=admins.find(a=>a.role==='super');
-  const toEmail=superAdmin&&superAdmin.email?superAdmin.email:null;
-  const ec=loadData('emailCfg',{});
-  const scoresText=Object.entries(r.scores).map(([k,v])=>`${k}: ${v}%`).join(' | ');
-  const params={
-    to_email:toEmail,
-    applicant_name:r.name,
-    applicant_phone:r.phone,
-    applicant_job:r.job,
-    interview_date:r.date,
-    test_date:r.testDate,
-    main_trait:r.mainTrait,
-    answer_rate:r.answerRate,
-    elapsed:r.elapsed,
-    scores_summary:scoresText
-  };
-  fetch('https://api.emailjs.com/api/v1.0/email/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({service_id:ec.service,template_id:ec.template,user_id:ec.pubkey,template_params:params})});
+  // Email 通知由 Apps Script 在收到資料後自動發送（不需要額外設定）
 }
 
 function pushToGSheet(r){
   const cfg=loadData('gsheetCfg',{});
   if(!cfg.url)return;
-  fetch(cfg.url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(r)});
+  // action: saveRecord — Apps Script 寫入試算表並自動寄信給所有管理員
+  fetch(cfg.url,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({...r, action:'saveRecord'})});
 }
 
 // ══════════════════════════════════

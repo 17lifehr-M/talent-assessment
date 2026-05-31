@@ -513,15 +513,17 @@ function sendNotification(r){
   // Email 通知由 Apps Script 在收到資料後自動發送（不需要額外設定）
 }
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwcyYma-V4kwMYOnD40Ygyo9F0rhHC3ONCQ7I5g1SqBEW6igwMROlTlDcoGuF2t3mIJ/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx8JXkCKhxxDjNTiqRzPo4UTK2kSGG9BeNWA4WKFcOCSLz9SD7kyMkbW9HxkocxLewX/exec';
 
 function pushToGSheet(r){
-  // Apps Script 寫入試算表並自動寄信給所有管理員
-  fetch(APPS_SCRIPT_URL, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({...r, action: 'saveRecord'})
-  });
+  // JSONP call — Apps Script 寫入試算表並自動寄信給所有管理員
+  const payload = Object.assign({}, r, {action: 'saveRecord'});
+  const cbName = 'cb_push_' + Date.now();
+  const script = document.createElement('script');
+  const timer = setTimeout(function(){ if(script.parentNode) script.parentNode.removeChild(script); delete window[cbName]; }, 15000);
+  window[cbName] = function(){ clearTimeout(timer); delete window[cbName]; if(script.parentNode) script.parentNode.removeChild(script); };
+  script.src = APPS_SCRIPT_URL + '?payload=' + encodeURIComponent(JSON.stringify(payload)) + '&callback=' + cbName + '&t=' + Date.now();
+  document.head.appendChild(script);
 }
 
 // ══════════════════════════════════

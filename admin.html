@@ -294,7 +294,7 @@ tr:hover td{background:var(--paper2)}
         </p>
         <div id="current-url-display" style="background:var(--paper2);border-radius:4px;padding:10px 14px;font-size:13px;color:var(--ink3);margin-bottom:12px;word-break:break-all"></div>
         <div class="form-group"><label>Web App URL</label>
-          <input type="text" id="cfg-gsheet-url" value="https://script.google.com/macros/s/AKfycbwcyYma-V4kwMYOnD40Ygyo9F0rhHC3ONCQ7I5g1SqBEW6igwMROlTlDcoGuF2t3mIJ/exec" readonly style="color:var(--ink3);cursor:default;font-family:'JetBrains Mono',monospace;font-size:12px">
+          <input type="text" id="cfg-gsheet-url" value="https://script.google.com/macros/s/AKfycbx8JXkCKhxxDjNTiqRzPo4UTK2kSGG9BeNWA4WKFcOCSLz9SD7kyMkbW9HxkocxLewX/exec" readonly style="color:var(--ink3);cursor:default;font-family:'JetBrains Mono',monospace;font-size:12px">
         </div>
         <button class="btn-primary btn-sm" onclick="testGSheet()">🔌 測試連線</button>
         <span style="font-size:12px;color:var(--ink3);margin-left:10px">URL 已內建，無需手動設定</span>
@@ -372,7 +372,7 @@ tr:hover td{background:var(--paper2)}
 // ══════════════════════════════════
 function getCfg(k,def=''){return localStorage.getItem(k)||def}
 function setCfg(k,v){localStorage.setItem(k,v)}
-const HARDCODED_URL = 'https://script.google.com/macros/s/AKfycbwcyYma-V4kwMYOnD40Ygyo9F0rhHC3ONCQ7I5g1SqBEW6igwMROlTlDcoGuF2t3mIJ/exec';
+const HARDCODED_URL = 'https://script.google.com/macros/s/AKfycbx8JXkCKhxxDjNTiqRzPo4UTK2kSGG9BeNWA4WKFcOCSLz9SD7kyMkbW9HxkocxLewX/exec';
 const getUrl=()=>HARDCODED_URL;
 
 let currentAdmin=null;
@@ -382,17 +382,38 @@ let allAdmins=[];
 // ══════════════════════════════════
 // API CALLS (all through Apps Script)
 // ══════════════════════════════════
-async function api(payload){
-  const resp=await fetch(HARDCODED_URL,{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(payload),
-    redirect:'follow'
+// ══════════════════════════════════
+// API via JSONP (bypasses CORS)
+// ══════════════════════════════════
+function api(payload){
+  return new Promise(function(resolve, reject){
+    const cbName = 'cb_' + Date.now() + '_' + Math.floor(Math.random()*10000);
+    const script = document.createElement('script');
+    const timeout = setTimeout(function(){
+      cleanup();
+      reject(new Error('連線逾時，請確認 Apps Script 已部署'));
+    }, 15000);
+
+    function cleanup(){
+      clearTimeout(timeout);
+      delete window[cbName];
+      if(script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    window[cbName] = function(data){
+      cleanup();
+      if(data.status === 'error') reject(new Error(data.message));
+      else resolve(data);
+    };
+
+    const encoded = encodeURIComponent(JSON.stringify(payload));
+    script.src = HARDCODED_URL + '?payload=' + encoded + '&callback=' + cbName + '&t=' + Date.now();
+    script.onerror = function(){
+      cleanup();
+      reject(new Error('Failed to fetch — 請確認 Apps Script 已正確部署且存取權限為「所有人」'));
+    };
+    document.head.appendChild(script);
   });
-  if(!resp.ok)throw new Error('HTTP '+resp.status);
-  const data=await resp.json();
-  if(data.status==='error')throw new Error(data.message);
-  return data;
 }
 
 // ══════════════════════════════════
@@ -889,18 +910,18 @@ async function testGSheet(){
   const res=document.getElementById('conn-test-result');
   res.textContent='測試中…';res.style.color='var(--ink3)';
   try{
-    const resp=await fetch(HARDCODED_URL,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'login',acc:'__ping__',pw:'__ping__'})
-    });
-    const data=await resp.json();
-    // Any response (even error) means API is reachable
+    await api({action:'login',acc:'__ping__',pw:'__ping__'});
     res.textContent='✓ 連線成功！Apps Script 運作正常';res.style.color='#1a5c2a';
     showToast('連線成功','success');
   }catch(e){
-    res.textContent='✗ 連線失敗：'+e.message;res.style.color='var(--danger)';
-    showToast('連線失敗：請確認 Apps Script 已部署且存取權限為「所有人」','error');
+    // Invalid credentials = API reachable but wrong login = connection OK
+    if(e.message==='Invalid credentials'){
+      res.textContent='✓ 連線成功！Apps Script 運作正常';res.style.color='#1a5c2a';
+      showToast('連線成功','success');
+    }else{
+      res.textContent='✗ 連線失敗：'+e.message;res.style.color='var(--danger)';
+      showToast('連線失敗','error');
+    }
   }
 }
 

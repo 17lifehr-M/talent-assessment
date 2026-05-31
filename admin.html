@@ -543,7 +543,7 @@ function renderDashTable(){
       <td><strong>${r.name}</strong></td><td>${r.job}</td><td>${r.date}</td>
       <td style="font-family:'JetBrains Mono',monospace;font-size:13px">${r.elapsed}</td>
       <td><span class="tag" style="background:var(--accent-light);color:var(--accent)">${r.mainTrait}</span></td>
-      <td><button class="btn-secondary btn-sm" onclick="openReport('${r.id}')">查看報告</button></td>
+      <td><button class="btn-secondary btn-sm" onclick="openReport(${r._sheetRow})">查看報告</button></td>
     </tr>`).join('');
 }
 
@@ -563,7 +563,7 @@ function renderRecords(){
       <td>${r.answerRate}</td>
       <td style="font-size:13px;color:var(--ink3)">${r.elapsed}</td>
       <td style="white-space:nowrap">
-        <button class="btn-secondary btn-sm" style="margin-right:6px" onclick="openReport('${r.id}')">📄 報告</button>
+        <button class="btn-secondary btn-sm" style="margin-right:6px" onclick="openReport(${r._sheetRow})">📄 報告</button>
         <button class="btn-danger btn-sm" onclick="deleteRecord('${r.id}','${r._sheetRow}')">刪除</button>
       </td>
     </tr>`).join('');
@@ -687,9 +687,9 @@ function buildRadarSVG(scores,size=240){
 // ══════════════════════════════════
 // REPORT MODAL (HTML-based, browser print)
 // ══════════════════════════════════
-function openReport(id){
-  const r=allRecords.find(x=>x.id===id||String(x._sheetRow)===String(id));
-  if(!r){showToast('找不到紀錄','error');return}
+function openReport(sheetRow){
+  const r=allRecords.find(x=>Number(x._sheetRow)===Number(sheetRow));
+  if(!r){showToast('找不到紀錄（請重新整理後再試）','error');return}
 
   const tm=typeMap[r.mainTrait]||typeMap['嚴謹性'];
 

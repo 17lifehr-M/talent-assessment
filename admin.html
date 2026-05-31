@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>人才評測管理後台</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -347,7 +349,8 @@ tr:hover td{background:var(--paper2)}
     <div class="modal-body" id="modal-report-body"></div>
     <div class="modal-foot no-print">
       <button class="btn-secondary" onclick="closeModal('modal-report')">關閉</button>
-      <button class="btn-primary" onclick="printReport()">🖨 列印 / 儲存 PDF</button>
+      <button class="btn-secondary" onclick="printReport()">🖨 列印</button>
+      <button class="btn-primary" id="btn-download-pdf" onclick="downloadPDF()">⬇ 下載 PDF</button>
     </div>
   </div>
 </div>
@@ -548,7 +551,18 @@ function renderStats(){
   if(allRecords.length){
     const avgSec=allRecords.reduce((s,r)=>{const m=r.elapsed.match(/(\d+)分(\d+)秒/);return s+(m?parseInt(m[1])*60+parseInt(m[2]):0)},0)/allRecords.length;
     document.getElementById('stat-avg-time').textContent=Math.floor(avgSec/60)+'分'+Math.round(avgSec%60)+'秒';
-    const rates=allRecords.map(r=>parseInt(r.answerRate)).filter(n=>!isNaN(n));
+    // answerRate can be "93%", "0.93", or 93 — normalise all to 0-100 integer
+    const rates=allRecords.map(r=>{
+      const raw=r.answerRate;
+      if(raw===null||raw===undefined||raw==='')return NaN;
+      const s=String(raw).trim();
+      // "93%" format
+      if(s.endsWith('%'))return parseFloat(s);
+      const n=parseFloat(s);
+      if(isNaN(n))return NaN;
+      // 0-1 decimal → ×100
+      return n<=1?Math.round(n*100):n;
+    }).filter(n=>!isNaN(n)&&n>0);
     document.getElementById('stat-avg-rate').textContent=rates.length?Math.round(rates.reduce((a,b)=>a+b,0)/rates.length)+'%':'—';
   }
 }
@@ -1102,6 +1116,92 @@ function openReport(sheetRow){
 
 function printReport(){
   window.print();
+}
+
+async function downloadPDF(){
+  const btn = document.getElementById('btn-download-pdf');
+  const area = document.getElementById('report-print-area');
+  if(!area){ showToast('找不到報告內容','error'); return; }
+
+  // Disable button during processing
+  const orig = btn.innerHTML;
+  btn.innerHTML = '⏳ 產生中…';
+  btn.disabled = true;
+
+  try {
+    // Temporarily expand modal body for full render
+    const modalBody = document.getElementById('modal-report-body');
+    const prevOverflow = modalBody.style.overflow;
+    const prevMaxH = modalBody.style.maxHeight;
+    modalBody.style.overflow = 'visible';
+    modalBody.style.maxHeight = 'none';
+
+    // Render to canvas
+    const canvas = await html2canvas(area, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+      windowWidth: 900,
+    });
+
+    // Restore modal
+    modalBody.style.overflow = prevOverflow;
+    modalBody.style.maxHeight = prevMaxH;
+
+    // Create PDF (A4 = 210 × 297 mm)
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+    const pageW = pdf.internal.pageSize.getWidth();   // 210
+    const pageH = pdf.internal.pageSize.getHeight();  // 297
+    const margin = 10; // mm
+    const imgW = pageW - margin * 2;
+    const imgH = (canvas.height / canvas.width) * imgW;
+
+    // Split into pages if content is taller than one page
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    let yPos = margin;
+    let remainH = imgH;
+    let sourceY = 0;
+
+    while(remainH > 0) {
+      const sliceH = Math.min(remainH, pageH - margin * 2);
+      const sliceRatio = sliceH / imgH;
+      const sourceSliceH = canvas.height * sliceRatio;
+
+      // Create a slice canvas
+      const sliceCanvas = document.createElement('canvas');
+      sliceCanvas.width = canvas.width;
+      sliceCanvas.height = sourceSliceH;
+      const ctx = sliceCanvas.getContext('2d');
+      ctx.drawImage(canvas, 0, sourceY, canvas.width, sourceSliceH, 0, 0, canvas.width, sourceSliceH);
+      const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.95);
+
+      pdf.addImage(sliceData, 'JPEG', margin, yPos, imgW, sliceH);
+
+      sourceY += sourceSliceH;
+      remainH -= sliceH;
+      if(remainH > 0) {
+        pdf.addPage();
+        yPos = margin;
+      }
+    }
+
+    // Get candidate name for filename
+    const nameEl = area.querySelector('div[style*="font-weight:500"]');
+    const name = nameEl ? nameEl.textContent.trim().substring(0,10) : '人格報告';
+    const date = new Date().toISOString().slice(0,10);
+    pdf.save(name + '_人格分析報告_' + date + '.pdf');
+
+    showToast('PDF 已下載至下載資料夾','success');
+  } catch(e) {
+    console.error('PDF download error:', e);
+    showToast('PDF 產生失敗，請改用列印功能：'+e.message,'error');
+  } finally {
+    btn.innerHTML = orig;
+    btn.disabled = false;
+  }
 }
 
 function openModal(id){document.getElementById(id).classList.add('open')}

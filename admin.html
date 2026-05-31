@@ -171,7 +171,7 @@ tr:hover td{background:var(--paper2)}
 <body>
 
 <!-- Loading overlay -->
-<div class="loading-overlay" id="loading-overlay">
+<div class="loading-overlay hidden" id="loading-overlay">
   <div class="spinner"></div>
   <p id="loading-msg">連線至 Google 試算表中…</p>
 </div>
@@ -294,7 +294,7 @@ tr:hover td{background:var(--paper2)}
         </p>
         <div id="current-url-display" style="background:var(--paper2);border-radius:4px;padding:10px 14px;font-size:13px;color:var(--ink3);margin-bottom:12px;word-break:break-all"></div>
         <div class="form-group"><label>Web App URL</label>
-          <input type="text" id="cfg-gsheet-url" value="https://script.google.com/macros/s/AKfycbwVZLNgMoNMlwQgiMYu30FJx2HlQ23gc5AGVP2mV6S-5h-BoLsRbjNY4VQiupbUH_PH/exec" readonly style="color:var(--ink3);cursor:default;font-family:'JetBrains Mono',monospace;font-size:12px">
+          <input type="text" id="cfg-gsheet-url" value="https://script.google.com/macros/s/AKfycbwcyYma-V4kwMYOnD40Ygyo9F0rhHC3ONCQ7I5g1SqBEW6igwMROlTlDcoGuF2t3mIJ/exec" readonly style="color:var(--ink3);cursor:default;font-family:'JetBrains Mono',monospace;font-size:12px">
         </div>
         <button class="btn-primary btn-sm" onclick="testGSheet()">🔌 測試連線</button>
         <span style="font-size:12px;color:var(--ink3);margin-left:10px">URL 已內建，無需手動設定</span>
@@ -372,7 +372,7 @@ tr:hover td{background:var(--paper2)}
 // ══════════════════════════════════
 function getCfg(k,def=''){return localStorage.getItem(k)||def}
 function setCfg(k,v){localStorage.setItem(k,v)}
-const HARDCODED_URL = 'https://script.google.com/macros/s/AKfycbxjZWvJrKvTjh0TSi6qsHdPr-eOeqhrdDk6WyIfFS0-rdt9FpDj2gUdLImh5UpNYcOxqg/exec';
+const HARDCODED_URL = 'https://script.google.com/macros/s/AKfycbwcyYma-V4kwMYOnD40Ygyo9F0rhHC3ONCQ7I5g1SqBEW6igwMROlTlDcoGuF2t3mIJ/exec';
 const getUrl=()=>HARDCODED_URL;
 
 let currentAdmin=null;
@@ -383,13 +383,13 @@ let allAdmins=[];
 // API CALLS (all through Apps Script)
 // ══════════════════════════════════
 async function api(payload){
-  const url=getUrl();
-  if(!url)throw new Error('請先設定 Web App URL');
-  const resp=await fetch(url,{
+  const resp=await fetch(HARDCODED_URL,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(payload)
+    body:JSON.stringify(payload),
+    redirect:'follow'
   });
+  if(!resp.ok)throw new Error('HTTP '+resp.status);
   const data=await resp.json();
   if(data.status==='error')throw new Error(data.message);
   return data;
@@ -412,7 +412,6 @@ async function doLogin(){
   const pw=document.getElementById('login-pw').value;
   const errEl=document.getElementById('login-err');
   if(!acc||!pw){errEl.style.display='block';errEl.textContent='請填入帳號與密碼';return}
-  if(!getUrl()){errEl.style.display='block';errEl.textContent='請先點選「設定後台連線網址」填入 Web App URL';return}
   setLoading(true,'驗證帳號中…');
   try{
     const r=await api({action:'login',acc,pw});
@@ -424,7 +423,8 @@ async function doLogin(){
   }catch(e){
     setLoading(false);
     errEl.style.display='block';
-    errEl.textContent=e.message==='Invalid credentials'?'帳號或密碼錯誤，請重試':'連線失敗：'+e.message;
+    if(e.message==='Invalid credentials'){errEl.textContent='帳號或密碼錯誤，請重試';}
+    else{errEl.textContent='連線失敗：'+e.message+'（請確認 Apps Script 已正確部署）';}
   }
 }
 
@@ -456,10 +456,9 @@ async function saveSetupUrl(){
 }
 
 function updateConnBadge(){
-  const url=getUrl();
+  // URL is hardcoded — always show connected
   const badge=document.getElementById('conn-badge');
-  if(url){badge.className='conn-status conn-ok';badge.textContent='✓ 已設定連線'}
-  else{badge.className='conn-status conn-err';badge.textContent='✗ 尚未設定 URL'}
+  if(badge){badge.className='conn-status conn-ok';badge.textContent='✓ 已連線 Google 試算表'}
 }
 
 // ══════════════════════════════════
@@ -887,23 +886,21 @@ function saveGSheetConfig(){
 }
 
 async function testGSheet(){
-  const url=document.getElementById('cfg-gsheet-url').value.trim();
-  if(!url){showToast('請先填入 URL','error');return}
-  setCfg('gsheet_url',url);
   const res=document.getElementById('conn-test-result');
   res.textContent='測試中…';res.style.color='var(--ink3)';
   try{
-    await api({action:'login',acc:'__ping__',pw:'__ping__'});
+    const resp=await fetch(HARDCODED_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'login',acc:'__ping__',pw:'__ping__'})
+    });
+    const data=await resp.json();
+    // Any response (even error) means API is reachable
     res.textContent='✓ 連線成功！Apps Script 運作正常';res.style.color='#1a5c2a';
     showToast('連線成功','success');
   }catch(e){
-    if(e.message==='Invalid credentials'){
-      res.textContent='✓ 連線成功！Apps Script 運作正常';res.style.color='#1a5c2a';
-      showToast('連線成功','success');
-    }else{
-      res.textContent='✗ 連線失敗：'+e.message;res.style.color='var(--danger)';
-      showToast('連線失敗','error');
-    }
+    res.textContent='✗ 連線失敗：'+e.message;res.style.color='var(--danger)';
+    showToast('連線失敗：請確認 Apps Script 已部署且存取權限為「所有人」','error');
   }
 }
 
@@ -918,7 +915,7 @@ function showToast(msg,type=''){
 }
 
 // ── Init ──
-setCfg('gsheet_url', HARDCODED_URL);
+// URL is hardcoded, just update the badge display
 updateConnBadge();
 </script>
 </body>

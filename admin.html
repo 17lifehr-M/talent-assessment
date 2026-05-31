@@ -366,8 +366,8 @@ tr:hover td{background:var(--paper2)}
     <div class="modal-body">
       <input type="hidden" id="edit-admin-row" value="">
       <div class="form-group"><label>姓名 *</label><input type="text" id="adm-name" placeholder="管理員姓名"></div>
-      <div class="form-group"><label>帳號 *</label><input type="text" id="adm-acc" placeholder="登入帳號" inputmode="text" autocomplete="off"></div>
-      <div class="form-group"><label>密碼 *</label><input type="text" id="adm-pw" placeholder="設定密碼（可含數字、英文、特殊字元）" autocomplete="new-password"></div>
+      <div class="form-group"><label>帳號 * <span style="font-size:12px;color:#c0392b;font-weight:400">（不可以0開頭）</span></label><input type="text" id="adm-acc" placeholder="登入帳號（不可以0開頭）" inputmode="text" autocomplete="off"></div>
+      <div class="form-group"><label>密碼 * <span style="font-size:12px;color:#c0392b;font-weight:400">（不可以0開頭）</span></label><input type="text" id="adm-pw" placeholder="設定密碼（不可以0開頭）" autocomplete="new-password"></div>
       <div class="form-group"><label>Email <span style="font-size:12px;color:var(--ink3);font-weight:400">（選填，填寫後可收到測驗完成通知）</span></label><input type="email" id="adm-email" placeholder="admin@company.com"></div>
       <div class="form-group"><label>角色</label>
         <select id="adm-role"><option value="admin">管理員</option><option value="super">超級管理員</option></select>
@@ -1257,7 +1257,9 @@ async function saveAdmin(){
   const role=document.getElementById('adm-role').value;
   const row=document.getElementById('edit-admin-row').value;
   if(!name||!acc){showToast('請填寫姓名與帳號','error');return}
+  if(acc.startsWith('0')){showToast('帳號不可以 0 開頭','error');return}
   if(!row&&!pw){showToast('新增管理員需設定密碼','error');return}
+  if(pw&&pw.startsWith('0')){showToast('密碼不可以 0 開頭','error');return}
   setLoading(true,'儲存中…');
   try{
     if(row){

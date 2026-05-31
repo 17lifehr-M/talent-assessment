@@ -252,11 +252,10 @@ function loadData(k,def){try{const v=localStorage.getItem(k);return v?JSON.parse
 function saveData(k,v){localStorage.setItem(k,JSON.stringify(v))}
 
 let records = loadData('records',[]);
-let gsheetCfg = loadData('gsheetCfg',{url:''});
 let currentAdmin = null;
 let currentReportIdx = -1;
 
-function persist(){saveData('records',records);saveData('gsheetCfg',gsheetCfg)}
+function persist(){saveData('records',records)}
 
 // ══════════════════════════════════
 // PAGE NAVIGATION
@@ -514,12 +513,15 @@ function sendNotification(r){
   // Email 通知由 Apps Script 在收到資料後自動發送（不需要額外設定）
 }
 
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwVZLNgMoNMlwQgiMYu30FJx2HlQ23gc5AGVP2mV6S-5h-BoLsRbjNY4VQiupbUH_PH/exec';
+
 function pushToGSheet(r){
-  const cfg=loadData('gsheetCfg',{});
-  if(!cfg.url)return;
-  // action: saveRecord — Apps Script 寫入試算表並自動寄信給所有管理員
-  fetch(cfg.url,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({...r, action:'saveRecord'})});
+  // Apps Script 寫入試算表並自動寄信給所有管理員
+  fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({...r, action: 'saveRecord'})
+  });
 }
 
 // ══════════════════════════════════

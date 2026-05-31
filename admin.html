@@ -1002,6 +1002,16 @@ function buildRadarSVG(scores,size=240){
 
 // ══════════════════════════════════
 // REPORT MODAL (HTML-based, browser print)
+
+// ── 人格類型對照表（用於報告標題顯示）──
+const typeMap = {
+  外向性:    { type:'社交主導型', typeEn:'Extrovert-Lead',    desc:'高度外向，在人際互動中充滿活力，善於主動建立連結。擅長公開表達與即興溝通，在需要頻繁協作和對外接觸的職位上表現突出。' },
+  親和性:    { type:'協作關懷型', typeEn:'Agreeableness-Lead', desc:'具備高度親和性，以溫暖、合作的方式與他人互動。重視人際和諧，善於傾聽和支持他人，在需要高度協作與服務的職位上特別適合。' },
+  嚴謹性:    { type:'執行嚴謹型', typeEn:'Conscientiousness-Lead', desc:'展現高度的嚴謹性，做事有條理、目標導向，擁有強烈的責任感。在需要精確度和持續執行力的職位上具有明顯優勢。' },
+  情緒穩定性:{ type:'穩定抗壓型', typeEn:'Stability-Lead',    desc:'展現良好的情緒穩定性，在壓力下仍能保持冷靜理性。能有效管理自身情緒，為團隊提供穩定可靠的心理支柱。' },
+  開放性:    { type:'創新探索型', typeEn:'Openness-Lead',     desc:'具有高度的開放性，充滿好奇心和創造力，對新想法、新體驗充滿熱情，思維靈活多元。在需要創新或策略規劃的職位上表現突出。' }
+};
+
 // ══════════════════════════════════
 function openReport(sheetRow){
   const r=allRecords.find(x=>Number(x._sheetRow)===Number(sheetRow));

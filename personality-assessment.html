@@ -516,7 +516,8 @@ function sendNotification(r){
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx8JXkCKhxxDjNTiqRzPo4UTK2kSGG9BeNWA4WKFcOCSLz9SD7kyMkbW9HxkocxLewX/exec';
 
 function pushToGSheet(r){
-  // JSONP call — Apps Script 寫入試算表
+  // 使用 fetch no-cors POST 推送資料至 Apps Script
+  // no-cors 模式無法讀取回應，但 Apps Script 仍會正常寫入試算表
   const payload = {
     action:     'saveRecord',
     name:       r.name       || '',
@@ -526,47 +527,48 @@ function pushToGSheet(r){
     elapsed:    r.elapsed    || '',
     mainTrait:  r.mainTrait  || '',
     answerRate: r.answerRate || '',
-    answered:   r.answered   || 0,
-    total:      r.total      || 88,
+    answered:   Number(r.answered) || 0,
+    total:      Number(r.total)    || 88,
     testDate:   r.testDate   || '',
     scores: {
-      '外向性':    r.scores ? (r.scores['外向性']    || 0) : 0,
-      '親和性':    r.scores ? (r.scores['親和性']    || 0) : 0,
-      '嚴謹性':    r.scores ? (r.scores['嚴謹性']    || 0) : 0,
-      '情緒穩定性': r.scores ? (r.scores['情緒穩定性'] || 0) : 0,
-      '開放性':    r.scores ? (r.scores['開放性']    || 0) : 0
+      '外向性':    Number(r.scores && r.scores['外向性'])    || 0,
+      '親和性':    Number(r.scores && r.scores['親和性'])    || 0,
+      '嚴謹性':    Number(r.scores && r.scores['嚴謹性'])    || 0,
+      '情緒穩定性': Number(r.scores && r.scores['情緒穩定性']) || 0,
+      '開放性':    Number(r.scores && r.scores['開放性'])    || 0
     }
   };
 
-  const cbName = 'cb_push_' + Date.now();
-  const script = document.createElement('script');
+  // 方法一：fetch POST no-cors（主要方式，Apps Script doPost 接收）
+  fetch(APPS_SCRIPT_URL, {
+    method:  'POST',
+    mode:    'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
+    body:    JSON.stringify(payload)
+  }).then(function(){
+    console.log('[pushToGSheet] POST sent (no-cors, cannot read response)');
+  }).catch(function(err){
+    console.warn('[pushToGSheet] POST failed, trying GET fallback:', err);
+    pushToGSheetFallback(payload);
+  });
+}
 
-  const timer = setTimeout(function(){
+function pushToGSheetFallback(payload){
+  // 方法二：JSONP GET（備用，當 POST 失敗時）
+  const cbName = 'cb_fb_' + Date.now();
+  const script  = document.createElement('script');
+  const timer   = setTimeout(function(){
     if(script.parentNode) script.parentNode.removeChild(script);
     delete window[cbName];
-    showToast('資料推送逾時，請確認網路連線', 'error');
   }, 20000);
-
-  window[cbName] = function(resp){
+  window[cbName] = function(){
     clearTimeout(timer);
     delete window[cbName];
     if(script.parentNode) script.parentNode.removeChild(script);
-    if(resp && resp.status === 'success'){
-      showToast('資料已成功儲存至系統', 'success');
-    } else {
-      showToast('資料推送失敗：' + (resp ? resp.message : '未知錯誤'), 'error');
-    }
   };
-
-  script.onerror = function(){
-    clearTimeout(timer);
-    delete window[cbName];
-    if(script.parentNode) script.parentNode.removeChild(script);
-    showToast('無法連線至伺服器，請確認網路', 'error');
-  };
-
-  const encoded = encodeURIComponent(JSON.stringify(payload));
-  script.src = APPS_SCRIPT_URL + '?payload=' + encoded + '&callback=' + cbName + '&t=' + Date.now();
+  script.src = APPS_SCRIPT_URL
+    + '?payload=' + encodeURIComponent(JSON.stringify(payload))
+    + '&callback=' + cbName + '&t=' + Date.now();
   document.head.appendChild(script);
 }
 

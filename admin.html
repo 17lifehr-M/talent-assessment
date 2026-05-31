@@ -317,7 +317,8 @@ tr:hover td{background:var(--paper2)}
       <div class="settings-card">
         <h3>🔐 更改我的帳號資料</h3>
         <div class="form-row">
-          <div class="form-group"><label>帳號</label><input type="text" id="my-acc" placeholder="帳號"></div>
+          <div class="form-group"><label>帳號</label><input type="text" id="my-acc" placeholder="帳號" autocomplete="off"></div>
+          <div class="form-group"><label>Email <span style="font-size:12px;color:var(--ink3);font-weight:400">（選填，收測驗通知用）</span></label><input type="email" id="my-email" placeholder="your@email.com"></div>
         </div>
         <div class="form-row">
           <div class="form-group"><label>新密碼（留空則不更改）</label><input type="password" id="my-pw" placeholder="新密碼"></div>
@@ -365,8 +366,9 @@ tr:hover td{background:var(--paper2)}
     <div class="modal-body">
       <input type="hidden" id="edit-admin-row" value="">
       <div class="form-group"><label>姓名 *</label><input type="text" id="adm-name" placeholder="管理員姓名"></div>
-      <div class="form-group"><label>帳號 *</label><input type="text" id="adm-acc" placeholder="登入帳號"></div>
-      <div class="form-group"><label>密碼 *</label><input type="password" id="adm-pw" placeholder="設定密碼"></div>
+      <div class="form-group"><label>帳號 *</label><input type="text" id="adm-acc" placeholder="登入帳號" inputmode="text" autocomplete="off"></div>
+      <div class="form-group"><label>密碼 *</label><input type="text" id="adm-pw" placeholder="設定密碼（可含數字、英文、特殊字元）" autocomplete="new-password"></div>
+      <div class="form-group"><label>Email <span style="font-size:12px;color:var(--ink3);font-weight:400">（選填，填寫後可收到測驗完成通知）</span></label><input type="email" id="adm-email" placeholder="admin@company.com"></div>
       <div class="form-group"><label>角色</label>
         <select id="adm-role"><option value="admin">管理員</option><option value="super">超級管理員</option></select>
       </div>
@@ -492,6 +494,7 @@ async function loadAdminUI(){
   document.getElementById('su-role').textContent=currentAdmin.role==='super'?'超級管理員':'管理員';
   document.getElementById('su-avatar').textContent=currentAdmin.name.charAt(0);
   document.getElementById('my-acc').value=currentAdmin.acc;
+  if(document.getElementById('my-email')) document.getElementById('my-email').value=currentAdmin.email||'';
   const url=getUrl();
   document.getElementById('cfg-gsheet-url').value=HARDCODED_URL;
   const disp=document.getElementById('current-url-display');
@@ -1217,7 +1220,7 @@ function renderAdminList(){
       <div class="adm-avatar">${a.name.charAt(0)}</div>
       <div class="adm-info">
         <div class="adm-name">${a.name} <span class="adm-role-badge ${a.role==='super'?'role-super':'role-admin'}">${a.role==='super'?'超級管理員':'管理員'}</span></div>
-        <div class="adm-sub">${a.acc}</div>
+        <div class="adm-sub">${a.acc}${a.email?' · '+a.email:''}</div>
       </div>
       <div class="adm-actions">
         <button class="btn-secondary btn-sm" onclick="openEditAdminModal(${i})">編輯</button>
@@ -1229,7 +1232,7 @@ function renderAdminList(){
 function openAddAdminModal(){
   document.getElementById('modal-admin-title').textContent='新增管理員';
   document.getElementById('edit-admin-row').value='';
-  ['adm-name','adm-acc','adm-pw'].forEach(id=>document.getElementById(id).value='');
+  ['adm-name','adm-acc','adm-pw','adm-email'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('adm-role').value='admin';
   openModal('modal-admin');
 }
@@ -1241,6 +1244,7 @@ function openEditAdminModal(idx){
   document.getElementById('adm-name').value=a.name;
   document.getElementById('adm-acc').value=a.acc;
   document.getElementById('adm-pw').value='';
+  document.getElementById('adm-email').value=a.email||'';
   document.getElementById('adm-role').value=a.role;
   openModal('modal-admin');
 }
@@ -1249,6 +1253,7 @@ async function saveAdmin(){
   const name=document.getElementById('adm-name').value.trim();
   const acc=document.getElementById('adm-acc').value.trim();
   const pw=document.getElementById('adm-pw').value;
+  const email=document.getElementById('adm-email').value.trim();
   const role=document.getElementById('adm-role').value;
   const row=document.getElementById('edit-admin-row').value;
   if(!name||!acc){showToast('請填寫姓名與帳號','error');return}
@@ -1256,9 +1261,9 @@ async function saveAdmin(){
   setLoading(true,'儲存中…');
   try{
     if(row){
-      await api({action:'updateAdmin',_sheetRow:row,name,acc,pw,role});
+      await api({action:'updateAdmin',_sheetRow:row,name,acc,pw,email,role});
     }else{
-      await api({action:'saveAdmin',name,acc,pw,role});
+      await api({action:'saveAdmin',name,acc,pw,email,role});
     }
     await refreshAll();
     closeModal('modal-admin');
@@ -1281,6 +1286,7 @@ async function deleteAdmin(idx){
 
 async function saveMyAccount(){
   const acc=document.getElementById('my-acc').value.trim();
+  const email=document.getElementById('my-email').value.trim();
   const pw=document.getElementById('my-pw').value;
   const pw2=document.getElementById('my-pw2').value;
   if(!acc){showToast('帳號不能為空','error');return}
@@ -1289,8 +1295,9 @@ async function saveMyAccount(){
   if(!myAdmin){showToast('找不到帳號資料','error');return}
   setLoading(true,'更新中…');
   try{
-    await api({action:'updateAdmin',_sheetRow:myAdmin._sheetRow,name:currentAdmin.name,acc,pw:pw||'__keep__',role:currentAdmin.role});
+    await api({action:'updateAdmin',_sheetRow:myAdmin._sheetRow,name:currentAdmin.name,acc,email,pw:pw||'__keep__',role:currentAdmin.role});
     currentAdmin.acc=acc;
+    currentAdmin.email=email;
     document.getElementById('su-name').textContent=currentAdmin.name;
     await refreshAll();
     showToast('帳號資料已更新','success');

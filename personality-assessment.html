@@ -497,6 +497,8 @@ function computeResult(){
 function saveRecord(r){
   records.push(r);
   persist();
+  // 推送至 Google 試算表
+  pushToGSheet(r);
 }
 
 function showDone(r){
@@ -531,7 +533,7 @@ function pushToGSheet(r){
     mainTrait:  r.mainTrait  || '',
     answerRate: r.answerRate || '',
     answered:   Number(r.answered) || 0,
-    total:      Number(r.total)    || 88,
+    total:      Number(r.total)    || 90,
     testDate:   r.testDate   || '',
     scores: {
       '外向性':    Number(r.scores && r.scores['外向性'])    || 0,

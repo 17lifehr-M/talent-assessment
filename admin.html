@@ -1342,8 +1342,13 @@ const typeMap = {
 
 // ══════════════════════════════════
 function openReport(sheetRow){
+  console.log('[openReport] called with sheetRow:', sheetRow);
+  console.log('[openReport] allRecords count:', allRecords.length);
   const r=allRecords.find(x=>Number(x._sheetRow)===Number(sheetRow));
+  console.log('[openReport] found record:', r ? r.name : 'NOT FOUND');
   if(!r){showToast('找不到紀錄（請重新整理後再試）','error');return}
+  console.log('[openReport] scores:', JSON.stringify(r.scores));
+  console.log('[openReport] mainTrait:', r.mainTrait);
 
   // 動態生成所有分析內容
   const tm         = typeMap[r.mainTrait] || typeMap['嚴謹性'];
@@ -1363,6 +1368,8 @@ function openReport(sheetRow){
     </div>`;
   }).join('');
 
+  console.log('[openReport] setting modal HTML...');
+  try {
   document.getElementById('modal-report-body').innerHTML=`
     <div id="report-print-area" style="font-family:'Noto Sans TC',sans-serif">
       <!-- Logo header for print -->
@@ -1425,6 +1432,12 @@ function openReport(sheetRow){
       <div style="font-size:11px;color:#7a7570;text-align:center;padding-top:12px;border-top:1px solid #e8e5de">機密文件 — 僅供人資部門使用  ·  17Life P@YEASY 人才評測系統</div>
     </div>`;
 
+  } catch(err) {
+    console.error('[openReport] ERROR building report:', err);
+    showToast('報告生成錯誤：' + err.message, 'error');
+    return;
+  }
+  console.log('[openReport] opening modal...');
   openModal('modal-report');
 }
 

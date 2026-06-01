@@ -1165,36 +1165,92 @@ function buildCareerRecommendations(scores) {
 
 // ── Radar Chart SVG ──
 
-function buildRadarSVG(scores,size=240){
-  const dims=Object.keys(scores);
-  const vals=dims.map(d=>scores[d]/100);
-  const N=dims.length;
-  const cx=size/2,cy=size/2,R=(size/2)-42;
-  const angle=(i)=>(-Math.PI/2)+(2*Math.PI/N)*i;
-  const pt=(r,i)=>{const a=angle(i);return[cx+r*Math.cos(a),cy+r*Math.sin(a)]};
-  let gridSvg='';
-  [0.2,0.4,0.6,0.8,1].forEach(t=>{
-    const pts=dims.map((_,i)=>pt(R*t,i).join(',')).join(' ');
-    gridSvg+=`<polygon points="${pts}" fill="none" stroke="#e8e5de" stroke-width="1"/>`;
+function buildRadarSVG(scores, size=240){
+  const dims = Object.keys(scores);
+  const vals = dims.map(d => scores[d] / 100);
+  const N    = dims.length;
+
+  // 使用更大的 viewBox，讓標籤有充足空間不被裁切
+  const pad  = 52;                  // 四周留給標籤的空間
+  const vb   = size + pad * 2;     // viewBox 實際大小
+  const cx   = vb / 2;
+  const cy   = vb / 2;
+  const R    = size / 2 - 8;       // 雷達圖半徑（相對於 vb 中心）
+
+  const angle = (i) => (-Math.PI / 2) + (2 * Math.PI / N) * i;
+  const pt    = (r, i) => {
+    const a = angle(i);
+    return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+  };
+
+  // 網格
+  let gridSvg = '';
+  [0.2, 0.4, 0.6, 0.8, 1].forEach(t => {
+    const pts = dims.map((_, i) => pt(R * t, i).join(',')).join(' ');
+    gridSvg += '<polygon points="' + pts + '" fill="none" stroke="#e8e5de" stroke-width="1"/>';
   });
-  dims.forEach((_,i)=>{const[x1,y1]=pt(0,i);const[x2,y2]=pt(R,i);gridSvg+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#e8e5de" stroke-width="1"/>`;});
-  const dataPts=vals.map((v,i)=>pt(R*v,i).join(',')).join(' ');
-  const labelColors=['#b03a2e','#c9a227','#1a5276','#6c3483','#1e8449'];
-  const dimLabels={外向性:'外向性',親和性:'親和性',嚴謹性:'嚴謹自律性',情緒穩定性:'神經質',開放性:'開放性'};
-  let labelSvg='';
-  dims.forEach((d,i)=>{
-    const[lx,ly]=pt(R+24,i);
-    const lbl=dimLabels[d]||d;
-    const col=labelColors[i]||'#333';
-    const anchor=lx<cx-5?'end':lx>cx+5?'start':'middle';
-    labelSvg+=`<text x="${lx}" y="${ly+4}" text-anchor="${anchor}" font-size="11" font-weight="600" fill="${col}" font-family="Noto Sans TC,sans-serif">${lbl}</text>`;
+  dims.forEach((_, i) => {
+    const [x1, y1] = pt(0, i);
+    const [x2, y2] = pt(R, i);
+    gridSvg += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="#e8e5de" stroke-width="1"/>';
   });
-  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-    ${gridSvg}
-    <polygon points="${dataPts}" fill="rgba(45,90,61,0.15)" stroke="#2d5a3d" stroke-width="2.5" stroke-linejoin="round"/>
-    ${vals.map((v,i)=>{const[px,py]=pt(R*v,i);return`<circle cx="${px}" cy="${py}" r="4" fill="#2d5a3d"/>`;}).join('')}
-    ${labelSvg}
-  </svg>`;
+
+  // 資料多邊形
+  const dataPts = vals.map((v, i) => pt(R * v, i).join(',')).join(' ');
+
+  // 標籤（正確的中文名稱，統一字體大小）
+  const labelColors = ['#b03a2e','#c9a227','#1a5276','#6c3483','#1e8449'];
+  const dimLabels   = {
+    外向性:'外向性', 親和性:'親和性', 嚴謹性:'嚴謹性',
+    情緒穩定性:'情緒穩定性', 開放性:'開放性'
+  };
+
+  let labelSvg = '';
+  dims.forEach((d, i) => {
+    const lbl = dimLabels[d] || d;
+    const col = labelColors[i] || '#333';
+
+    // 標籤位置：比頂點再往外推 30px
+    const [lx, ly] = pt(R + 30, i);
+
+    // 水平對齊：左側靠右、右側靠左、頂底居中
+    var anchor = 'middle';
+    if (lx < cx - 10) anchor = 'end';
+    else if (lx > cx + 10) anchor = 'start';
+
+    // 垂直偏移：頂點往上移、底部往下移
+    var dy = 0;
+    if (ly < cy - 10) dy = -6;
+    else if (ly > cy + 10) dy = 6;
+
+    // 「情緒穩定性」較長，左側 end-aligned 需額外偏移
+    var dx = 0;
+    if (anchor === 'end' && lbl.length >= 5) dx = -4;
+    if (anchor === 'start' && lbl.length >= 5) dx = 4;
+
+    labelSvg += '<text x="' + (lx + dx) + '" y="' + (ly + dy + 4) + '"'
+      + ' text-anchor="' + anchor + '"'
+      + ' font-size="12" font-weight="600"'
+      + ' fill="' + col + '"'
+      + ' font-family="Noto Sans TC,sans-serif">'
+      + lbl + '</text>';
+  });
+
+  // 資料點
+  const dotsSvg = vals.map((v, i) => {
+    const [px, py] = pt(R * v, i);
+    return '<circle cx="' + px + '" cy="' + py + '" r="4" fill="#2d5a3d"/>';
+  }).join('');
+
+  // 輸出 SVG：用更大的 viewBox，保持外層 size 不變
+  return '<svg width="' + size + '" height="' + size + '"'
+    + ' viewBox="0 0 ' + vb + ' ' + vb + '"'
+    + ' xmlns="http://www.w3.org/2000/svg">'
+    + gridSvg
+    + '<polygon points="' + dataPts + '" fill="rgba(45,90,61,0.15)" stroke="#2d5a3d" stroke-width="2.5" stroke-linejoin="round"/>'
+    + dotsSvg
+    + labelSvg
+    + '</svg>';
 }
 
 // ══════════════════════════════════

@@ -263,7 +263,7 @@ tr:hover td{background:var(--paper2)}
           <h3>最近測驗紀錄</h3>
           <button class="btn-secondary btn-sm no-print" onclick="refreshAll()">🔄 重新整理</button>
         </div>
-        <table><thead><tr><th>姓名</th><th>應徵職務</th><th>面試日期</th><th>完成時間</th><th>主要特質</th><th>操作</th></tr></thead>
+        <table><thead><tr><th>姓名</th><th>應徵職務</th><th id="dash-sort-interviewDate" onclick="sortRecords('interviewDate')" style="cursor:pointer;user-select:none">面試日期 ⇅</th><th>完成時間</th><th>主要特質</th><th id="dash-sort-testDate" onclick="sortRecords('testDate')" style="cursor:pointer;user-select:none">測驗日期時間 ⇅</th><th>操作</th></tr></thead>
         <tbody id="dash-table-body"></tbody></table>
       </div>
     </div>
@@ -280,7 +280,7 @@ tr:hover td{background:var(--paper2)}
           </div>
           <button class="btn-secondary btn-sm no-print" onclick="refreshAll()">🔄 重新整理</button>
         </div>
-        <table><thead><tr><th>姓名</th><th>電話</th><th>應徵職務</th><th>面試日期</th><th>主要特質</th><th>作答率</th><th>完成時間</th><th>操作</th></tr></thead>
+        <table><thead><tr><th>姓名</th><th>電話</th><th>應徵職務</th><th id="sort-interviewDate" onclick="sortRecords('interviewDate')" style="cursor:pointer;user-select:none">面試日期 ⇅</th><th>主要特質</th><th>作答率</th><th>完成時間</th><th id="sort-testDate" onclick="sortRecords('testDate')" style="cursor:pointer;user-select:none">測驗日期時間 ⇅</th><th>操作</th></tr></thead>
         <tbody id="rec-table-body"></tbody></table>
         <div id="rec-empty" style="padding:40px;text-align:center;color:var(--ink3);display:none">尚無測驗紀錄</div>
       </div>
@@ -521,6 +521,7 @@ async function loadAdminUI(){
   const disp=document.getElementById('current-url-display');
   disp.textContent='目前連線（內建）：'+HARDCODED_URL;
   await refreshAll();
+  updateSortHeaders();
 }
 
 async function refreshAll(){
@@ -591,22 +592,64 @@ function renderStats(){
   }
 }
 
+
+// ── 排序功能 ──────────────────────────────────────────────────────
+let sortField = 'testDate';
+let sortAsc   = false;
+
+function sortRecords(field) {
+  if (sortField === field) { sortAsc = !sortAsc; }
+  else { sortField = field; sortAsc = false; }
+  renderRecords();
+  renderDashTable();
+  updateSortHeaders();
+}
+
+function getSortedRecords(records) {
+  return [...records].sort(function(a, b) {
+    var va = String(a[sortField] || '');
+    var vb = String(b[sortField] || '');
+    var cmp = va.localeCompare(vb, 'zh-TW');
+    return sortAsc ? cmp : -cmp;
+  });
+}
+
+function updateSortHeaders() {
+  var fields = {
+    'sort-interviewDate': '面試日期',
+    'sort-testDate': '測驗日期時間',
+    'dash-sort-interviewDate': '面試日期',
+    'dash-sort-testDate': '測驗日期時間'
+  };
+  Object.keys(fields).forEach(function(id) {
+    var th = document.getElementById(id);
+    if (!th) return;
+    var f = id.replace('sort-','').replace('dash-','');
+    var arrow = sortField === f ? (sortAsc ? ' ▲' : ' ▼') : ' ⇅';
+    th.textContent = fields[id] + arrow;
+  });
+}
+// ──────────────────────────────────────────────────────────────────
+
 function renderDashTable(){
-  const recent=[...allRecords].reverse().slice(0,8);
+  const recent=getSortedRecords(allRecords).slice(0,8);
   const tb=document.getElementById('dash-table-body');
-  if(!recent.length){tb.innerHTML=`<tr><td colspan="6" style="text-align:center;color:var(--ink3);padding:32px">尚無紀錄</td></tr>`;return}
+  if(!recent.length){tb.innerHTML=`<tr><td colspan="7" style="text-align:center;color:var(--ink3);padding:32px">尚無紀錄</td></tr>`;return}
   tb.innerHTML=recent.map(r=>`
     <tr>
-      <td><strong>${r.name}</strong></td><td>${r.job}</td><td>${formatDate(r.date)}</td>
+      <td><strong>${r.name}</strong></td>
+      <td>${r.job}</td>
+      <td>${formatDate(r.date)}</td>
       <td style="font-family:'JetBrains Mono',monospace;font-size:13px">${r.elapsed}</td>
       <td><span class="tag" style="background:var(--accent-light);color:var(--accent)">${r.mainTrait}</span></td>
+      <td style="font-size:12px;color:var(--ink3)">${r.testDate||'—'}</td>
       <td><button class="btn-secondary btn-sm" onclick="openReport(${r._sheetRow})">查看報告</button></td>
     </tr>`).join('');
 }
 
 function renderRecords(){
   const kw=(document.getElementById('rec-search').value||'').toLowerCase();
-  const filtered=[...allRecords].reverse().filter(r=>r.name.includes(kw)||r.job.includes(kw));
+  const filtered=getSortedRecords(allRecords).filter(r=>r.name.includes(kw)||r.job.includes(kw));
   const tb=document.getElementById('rec-table-body');
   const empty=document.getElementById('rec-empty');
   if(!filtered.length){tb.innerHTML='';empty.style.display='block';return}

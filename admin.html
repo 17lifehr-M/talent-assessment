@@ -255,8 +255,6 @@ tr:hover td{background:var(--paper2)}
       <div class="stat-grid">
         <div class="stat-card"><div class="sc-val" id="stat-total">—</div><div class="sc-lbl">總測驗人數</div></div>
         <div class="stat-card"><div class="sc-val" id="stat-today">—</div><div class="sc-lbl">今日測驗</div></div>
-        <div class="stat-card"><div class="sc-val" id="stat-avg-time">—</div><div class="sc-lbl">平均作答時間</div></div>
-        <div class="stat-card"><div class="sc-val" id="stat-avg-rate">—</div><div class="sc-lbl">平均作答率</div></div>
       </div>
       <div class="table-wrap">
         <div class="table-head">
@@ -570,26 +568,17 @@ function renderStats(){
   document.getElementById('stat-total').textContent=allRecords.length;
   const today=new Date().toLocaleDateString('zh-TW');
   const todayCount=allRecords.filter(r=>{
-    try{return new Date(r.testDate).toLocaleDateString('zh-TW')===today}catch{return false}
+    try{
+      if(!r.testDate) return false;
+      // testDate format: "2026/6/2 上午 9:21:59" — extract date portion before space
+      const datePart = r.testDate.split(' ')[0];
+      // Convert to comparable: new Date(datePart) or direct string match
+      const d = new Date(datePart.replace(/\//g,'-'));
+      return d.toLocaleDateString('zh-TW')===today;
+    }catch{return false}
   }).length;
   document.getElementById('stat-today').textContent=todayCount;
-  if(allRecords.length){
-    const avgSec=allRecords.reduce((s,r)=>{const m=r.elapsed.match(/(\d+)分(\d+)秒/);return s+(m?parseInt(m[1])*60+parseInt(m[2]):0)},0)/allRecords.length;
-    document.getElementById('stat-avg-time').textContent=Math.floor(avgSec/60)+'分'+Math.round(avgSec%60)+'秒';
-    // answerRate can be "93%", "0.93", or 93 — normalise all to 0-100 integer
-    const rates=allRecords.map(r=>{
-      const raw=r.answerRate;
-      if(raw===null||raw===undefined||raw==='')return NaN;
-      const s=String(raw).trim();
-      // "93%" format
-      if(s.endsWith('%'))return parseFloat(s);
-      const n=parseFloat(s);
-      if(isNaN(n))return NaN;
-      // 0-1 decimal → ×100
-      return n<=1?Math.round(n*100):n;
-    }).filter(n=>!isNaN(n)&&n>0);
-    document.getElementById('stat-avg-rate').textContent=rates.length?Math.round(rates.reduce((a,b)=>a+b,0)/rates.length)+'%':'—';
-  }
+
 }
 
 
@@ -1320,8 +1309,6 @@ tr:hover td{background:var(--paper2)}
       <div class="stat-grid">
         <div class="stat-card"><div class="sc-val" id="stat-total">—</div><div class="sc-lbl">總測驗人數</div></div>
         <div class="stat-card"><div class="sc-val" id="stat-today">—</div><div class="sc-lbl">今日測驗</div></div>
-        <div class="stat-card"><div class="sc-val" id="stat-avg-time">—</div><div class="sc-lbl">平均作答時間</div></div>
-        <div class="stat-card"><div class="sc-val" id="stat-avg-rate">—</div><div class="sc-lbl">平均作答率</div></div>
       </div>
       <div class="table-wrap">
         <div class="table-head">
@@ -1635,26 +1622,17 @@ function renderStats(){
   document.getElementById('stat-total').textContent=allRecords.length;
   const today=new Date().toLocaleDateString('zh-TW');
   const todayCount=allRecords.filter(r=>{
-    try{return new Date(r.testDate).toLocaleDateString('zh-TW')===today}catch{return false}
+    try{
+      if(!r.testDate) return false;
+      // testDate format: "2026/6/2 上午 9:21:59" — extract date portion before space
+      const datePart = r.testDate.split(' ')[0];
+      // Convert to comparable: new Date(datePart) or direct string match
+      const d = new Date(datePart.replace(/\//g,'-'));
+      return d.toLocaleDateString('zh-TW')===today;
+    }catch{return false}
   }).length;
   document.getElementById('stat-today').textContent=todayCount;
-  if(allRecords.length){
-    const avgSec=allRecords.reduce((s,r)=>{const m=r.elapsed.match(/(\d+)分(\d+)秒/);return s+(m?parseInt(m[1])*60+parseInt(m[2]):0)},0)/allRecords.length;
-    document.getElementById('stat-avg-time').textContent=Math.floor(avgSec/60)+'分'+Math.round(avgSec%60)+'秒';
-    // answerRate can be "93%", "0.93", or 93 — normalise all to 0-100 integer
-    const rates=allRecords.map(r=>{
-      const raw=r.answerRate;
-      if(raw===null||raw===undefined||raw==='')return NaN;
-      const s=String(raw).trim();
-      // "93%" format
-      if(s.endsWith('%'))return parseFloat(s);
-      const n=parseFloat(s);
-      if(isNaN(n))return NaN;
-      // 0-1 decimal → ×100
-      return n<=1?Math.round(n*100):n;
-    }).filter(n=>!isNaN(n)&&n>0);
-    document.getElementById('stat-avg-rate').textContent=rates.length?Math.round(rates.reduce((a,b)=>a+b,0)/rates.length)+'%':'—';
-  }
+
 }
 
 

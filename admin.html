@@ -696,18 +696,18 @@ function getScoreBand(v) {
   v = parseInt(v) || 0;
   if (v >= 90) return 9;  // 極高
   if (v >= 80) return 8;  // 高
-  if (v >= 70) return 7;  // 中高
-  if (v >= 60) return 6;  // 偏高
+  if (v >= 70) return 7;  // 偏高
+  if (v >= 60) return 6;  // 中高
   if (v >= 50) return 5;  // 中等
-  if (v >= 40) return 4;  // 偏低
-  if (v >= 30) return 3;  // 中低
+  if (v >= 40) return 4;  // 中低
+  if (v >= 30) return 3;  // 偏低
   if (v >= 20) return 2;  // 低
   if (v >= 10) return 1;  // 很低
   return 0;               // 極低
 }
 
 function getBandLabel(b) {
-  return ['極低','很低','低','中低','偏低','中等','偏高','中高','高','極高'][b];
+  return ['極低','很低','低','偏低','中低','中等','中高','偏高','高','極高'][b];
 }
 
 // 每個維度 × 5個區間 的完整描述

@@ -1457,7 +1457,7 @@ function openReport(sheetRow){
   const interviewTip      = buildInterviewTip(r.mainTrait, r.scores);
   const careers           = buildCareerRecommendations(r.scores);
 
-  const scoresHtml=Object.entries(r.scores).map(([k,v])=>{
+  const scoresHtml=Object.entries(r.scores).sort((a,b)=>(parseInt(b[1])||0)-(parseInt(a[1])||0)).map(([k,v])=>{
     v=parseInt(v)||0;
     return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
       <span style="font-size:13px;width:72px;flex-shrink:0">${k}</span>

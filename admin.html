@@ -263,7 +263,7 @@ tr:hover td{background:var(--paper2)}
           <h3>最近測驗紀錄</h3>
           <button class="btn-secondary btn-sm no-print" onclick="refreshAll()">🔄 重新整理</button>
         </div>
-        <table><thead><tr><th>姓名</th><th>應徵職務</th><th id="dash-sort-interviewDate" onclick="sortRecords('interviewDate')" style="cursor:pointer;user-select:none">面試日期 ⇅</th><th>完成時間</th><th>主要特質</th><th id="dash-sort-testDate" onclick="sortRecords('testDate')" style="cursor:pointer;user-select:none">測驗日期時間 ⇅</th><th>操作</th></tr></thead>
+        <table><thead><tr><th>姓名</th><th>應徵職務</th><th id="dash-sort-date" onclick="sortRecords('date')" style="cursor:pointer;user-select:none">面試日期 ⇅</th><th>完成時間</th><th>主要特質</th><th id="dash-sort-testDate" onclick="sortRecords('testDate')" style="cursor:pointer;user-select:none">測驗日期時間 ⇅</th><th>操作</th></tr></thead>
         <tbody id="dash-table-body"></tbody></table>
       </div>
     </div>
@@ -280,7 +280,7 @@ tr:hover td{background:var(--paper2)}
           </div>
           <button class="btn-secondary btn-sm no-print" onclick="refreshAll()">🔄 重新整理</button>
         </div>
-        <table><thead><tr><th>姓名</th><th>電話</th><th>應徵職務</th><th id="sort-interviewDate" onclick="sortRecords('interviewDate')" style="cursor:pointer;user-select:none">面試日期 ⇅</th><th>主要特質</th><th>作答率</th><th>完成時間</th><th id="sort-testDate" onclick="sortRecords('testDate')" style="cursor:pointer;user-select:none">測驗日期時間 ⇅</th><th>操作</th></tr></thead>
+        <table><thead><tr><th>姓名</th><th>電話</th><th>應徵職務</th><th id="sort-date" onclick="sortRecords('date')" style="cursor:pointer;user-select:none">面試日期 ⇅</th><th>主要特質</th><th>作答率</th><th>完成時間</th><th id="sort-testDate" onclick="sortRecords('testDate')" style="cursor:pointer;user-select:none">測驗日期時間 ⇅</th><th>操作</th></tr></thead>
         <tbody id="rec-table-body"></tbody></table>
         <div id="rec-empty" style="padding:40px;text-align:center;color:var(--ink3);display:none">尚無測驗紀錄</div>
       </div>
@@ -616,15 +616,15 @@ function getSortedRecords(records) {
 
 function updateSortHeaders() {
   var fields = {
-    'sort-interviewDate': '面試日期',
+    'sort-date': '面試日期',
     'sort-testDate': '測驗日期時間',
-    'dash-sort-interviewDate': '面試日期',
+    'dash-sort-date': '面試日期',
     'dash-sort-testDate': '測驗日期時間'
   };
   Object.keys(fields).forEach(function(id) {
     var th = document.getElementById(id);
     if (!th) return;
-    var f = id.replace('sort-','').replace('dash-','');
+    var f = id.replace('dash-sort-','').replace('sort-','');
     var arrow = sortField === f ? (sortAsc ? ' ▲' : ' ▼') : ' ⇅';
     th.textContent = fields[id] + arrow;
   });

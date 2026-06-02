@@ -642,7 +642,7 @@ function renderDashTable(){
       <td>${formatDate(r.date)}</td>
       <td style="font-family:'JetBrains Mono',monospace;font-size:13px">${r.elapsed}</td>
       <td><span class="tag" style="background:var(--accent-light);color:var(--accent)">${r.mainTrait}</span></td>
-      <td style="font-size:12px;color:var(--ink3)">${r.testDate||'—'}</td>
+      <td style="font-size:12px;color:var(--ink3)">${r.testDate ? r.testDate : '<span style="color:#bbb">未記錄</span>'}</td>
       <td><button class="btn-secondary btn-sm" onclick="openReport(${r._sheetRow})">查看報告</button></td>
     </tr>`).join('');
 }
@@ -662,6 +662,7 @@ function renderRecords(){
       <td><span class="tag" style="background:var(--accent-light);color:var(--accent)">${r.mainTrait}</span></td>
       <td>${r.answerRate}</td>
       <td style="font-size:13px;color:var(--ink3)">${r.elapsed}</td>
+      <td style="font-size:12px;color:var(--ink3);white-space:nowrap">${r.testDate ? r.testDate : '<span style="color:#bbb">未記錄</span>'}</td>
       <td style="white-space:nowrap">
         <button class="btn-secondary btn-sm" style="margin-right:6px" onclick="openReport(${r._sheetRow})">📄 報告</button>
         <button class="btn-danger btn-sm" onclick="deleteRecord('${r.id}','${r._sheetRow}')">刪除</button>
